@@ -1,153 +1,202 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GLD Automóveis 3D</title>
 <style>
-body{margin:0;background:#080b12;color:white;font-family:Arial;text-align:center}
-header{padding:22px;color:#f5bd36;font-size:27px;font-weight:bold}
-p{color:#ddd}
-canvas{width:100%;height:55vh;display:block;touch-action:pan-y}
-button{background:#f5bd36;color:#111;border:0;border-radius:9px;padding:13px;margin:6px;font-weight:bold}
+*{box-sizing:border-box}
+body{margin:0;background:#080b12;color:white;font-family:Arial,sans-serif}
+header{padding:22px 15px;text-align:center;background:#111722;border-bottom:2px solid #f5bd36}
+h1{color:#f5bd36;margin:5px}
+header p{color:#ddd}
+main{max-width:900px;margin:auto;padding:15px}
+.card{background:#121925;border:1px solid #333d4c;border-radius:14px;overflow:hidden;margin:15px 0}
+#vitrine{height:330px;position:relative;background:radial-gradient(#293442,#080b12)}
+canvas{width:100%;height:100%;display:block}
+.info{padding:16px}
+h2{margin:5px 0;color:#f5bd36}
+.preco{font-size:25px;font-weight:bold;margin:12px 0}
+button,.botao{display:inline-block;border:0;border-radius:8px;padding:12px;margin:4px 2px;background:#f5bd36;color:#111;font-weight:bold;font-size:15px;text-decoration:none;cursor:pointer}
+.secundario{background:#293442;color:white}
+input{display:block;width:100%;padding:12px;margin:8px 0;border-radius:7px;border:1px solid #444;background:#080b12;color:white}
+#cadastro{display:none}
+small{color:#bbb}
+footer{text-align:center;padding:25px;color:#aaa}
 </style>
 </head>
 <body>
-<header>GLD AUTOMÓVEIS</header>
+<header>
+<h1>GLD AUTOMÓVEIS</h1>
 <p>COMPRA • VENDA • FINANCIAMENTO</p>
-<canvas id="carro"></canvas>
-<h3>Vitrine 3D Interativa</h3>
-<p>Arraste o dedo para girar o veículo.</p>
-<button id="movimento">Ativar movimento do celular</button>
-<button id="girar">Girar automaticamente</button>
-<script type="module">
-import * as THREE from
-'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+</header>
 
-const canvas=document.querySelector('#carro');
-const scene=new THREE.Scene();
-scene.background=new THREE.Color('#111722');
+<main>
+<div class="card">
+<div id="vitrine">
+<canvas id="carro3d"></canvas>
+</div>
+<div class="info">
+<h2 id="modelo">SUV 3D — GLD</h2>
+<p>Visualização 3D com rotação automática.</p>
+<div class="preco" id="preco">Consulte o preço</div>
+<button onclick="girar()">Girar veículo</button>
+<button class="secundario" onclick="pausar()">Pausar / continuar</button>
+<a class="botao" id="whatsapp" href="https://wa.me/" target="_blank">Consultar no WhatsApp</a>
+</div>
+</div>
 
-const camera=new THREE.PerspectiveCamera(45,1,.1,100);
-camera.position.set(5,3,7);
-camera.lookAt(0,.7,0);
+<div class="card info">
+<h2>Vitrine de veículos</h2>
+<p>Cadastre veículos para exibição nesta página.</p>
+<button onclick="mostrarCadastro()">+ Adicionar veículo</button>
+<div id="cadastro">
+<input id="nome" placeholder="Modelo do veículo">
+<input id="valor" placeholder="Preço (ex.: R$ 85.000)">
+<input id="ano" placeholder="Ano do veículo">
+<button onclick="adicionar()">Salvar veículo</button>
+</div>
+<div id="lista"></div>
+</div>
+</main>
 
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-scene.add(new THREE.HemisphereLight(0xffffff,0x333344,2));
+<footer>GLD AUTOMÓVEIS 3D • Sua próxima conquista começa aqui.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+const canvas=document.getElementById('carro3d');
+const cena=new THREE.Scene();
+cena.background=new THREE.Color(0x101722);
+
+const camera=new THREE.PerspectiveCamera(40,1,0.1,100);
+camera.position.set(6,4,8);
+camera.lookAt(0,1,0);
+
+const render=new THREE.WebGLRenderer({canvas,antialias:true});
+render.setPixelRatio(Math.min(window.devicePixelRatio,2));
+render.shadowMap.enabled=true;
+render.outputColorSpace=THREE.SRGBColorSpace;
+
+cena.add(new THREE.HemisphereLight(0xffffff,0x39404c,2));
 
 const luz=new THREE.DirectionalLight(0xffffff,3);
-luz.position.set(4,7,5);
-scene.add(luz);
+luz.position.set(4,8,6);
+cena.add(luz);
 
 const carro=new THREE.Group();
-scene.add(carro);
+cena.add(carro);
 
-function caixa(w,h,d,cor,x,y,z){
- const m=new THREE.Mesh(
-  new THREE.BoxGeometry(w,h,d),
-  new THREE.MeshStandardMaterial({
-   color:cor,metalness:.65,roughness:.3
-  })
- );
- m.position.set(x,y,z);
- carro.add(m);
- return m;
+function caixa(w,h,d,x,y,z,cor){
+const m=new THREE.Mesh(
+new THREE.BoxGeometry(w,h,d),
+new THREE.MeshStandardMaterial({color:cor,metalness:.55,roughness:.3})
+);
+m.position.set(x,y,z);
+m.castShadow=true;
+carro.add(m);
+return m;
 }
 
-caixa(2,.5,4,0xb9c1ce,0,.65,0);
-caixa(1.5,.65,2,0x182a40,0,1.15,-.25);
-caixa(1.8,.15,3.7,0xb9c1ce,0,.94,0);
+// Carroceria SUV
+caixa(2.2,.65,4,0,.85,0,0x303b49);
+caixa(1.9,.8,2.1,0,1.48,-.25,0x36485a);
 
-for(const z of [-1.3,1.3]){
- for(const x of [-1.02,1.02]){
-  const roda=new THREE.Mesh(
-   new THREE.CylinderGeometry(.4,.4,.22,32),
-   new THREE.MeshStandardMaterial({color:0x151515})
-  );
+// Janelas
+caixa(1.91,.52,1.65,0,1.75,-.3,0x101b28);
+caixa(1.93,.45,.12,0,1.73,.62,0x17283b);
+
+// Para-choques
+caixa(2.25,.22,.22,0,.55,2.02,0xb4bbc3);
+caixa(2.25,.22,.22,0,.55,-2.02,0xb4bbc3);
+
+// Grade dianteira
+caixa(.85,.35,.035,0,.83,2.13,0x080b10);
+
+// Faróis
+caixa(.48,.15,.07,-.72,1.02,2.13,0xffffff);
+caixa(.48,.15,.07,.72,1.02,2.13,0xffffff);
+
+// Rodas
+const pneuGeo=new THREE.CylinderGeometry(.43,.43,.24,32);
+const pneuMat=new THREE.MeshStandardMaterial({color:0x101010,roughness:.85});
+const aroGeo=new THREE.CylinderGeometry(.24,.24,.255,24);
+const aroMat=new THREE.MeshStandardMaterial({color:0xc3c8ce,metalness:.8,roughness:.25});
+
+for(const x of [-1.12,1.12]){
+ for(const z of [-1.3,1.3]){
+  const roda=new THREE.Mesh(pneuGeo,pneuMat);
   roda.rotation.z=Math.PI/2;
-  roda.position.set(x,.45,z);
+  roda.position.set(x,.52,z);
   carro.add(roda);
 
-  const aro=new THREE.Mesh(
-   new THREE.CylinderGeometry(.22,.22,.24,24),
-   new THREE.MeshStandardMaterial({
-    color:0xc7cbd2,metalness:.9
-   })
-  );
+  const aro=new THREE.Mesh(aroGeo,aroMat);
   aro.rotation.z=Math.PI/2;
-  aro.position.set(x,.45,z);
+  aro.position.set(x*1.015,.52,z);
   carro.add(aro);
  }
 }
 
-caixa(1.5,.12,.08,0xffffff,0,.7,2.02);
-caixa(1.5,.12,.08,0xcc2222,0,.7,-2.02);
-
+// Chão
 const chao=new THREE.Mesh(
- new THREE.CircleGeometry(5,64),
- new THREE.MeshStandardMaterial({color:0x252b35})
+new THREE.PlaneGeometry(200,200),
+new THREE.MeshStandardMaterial({color:0x171d27,roughness:.8})
 );
 chao.rotation.x=-Math.PI/2;
-chao.position.y=-.02;
-scene.add(chao);
+chao.position.y=.05;
+cena.add(chao);
+
+let automatico=true;
+function girar(){carro.rotation.y+=Math.PI/4}
+function pausar(){automatico=!automatico}
 
 function ajustar(){
- const w=canvas.clientWidth,h=canvas.clientHeight;
- renderer.setSize(w,h,false);
- camera.aspect=w/h;
- camera.updateProjectionMatrix();
+const w=canvas.clientWidth;
+const h=canvas.clientHeight;
+if(!w||!h)return;
+render.setSize(w,h,false);
+camera.aspect=w/h;
+camera.updateProjectionMatrix();
 }
-new ResizeObserver(ajustar).observe(canvas);
+window.addEventListener('resize',ajustar);
 ajustar();
 
-let angulo=.5,auto=false,arrastando=false,xAnterior=0;
-canvas.addEventListener('pointerdown',e=>{
- arrastando=true;xAnterior=e.clientX;
- canvas.setPointerCapture(e.pointerId);
-});
-canvas.addEventListener('pointermove',e=>{
- if(arrastando){
-  angulo+=(e.clientX-xAnterior)*.012;
-  xAnterior=e.clientX;
- }
-});
-canvas.addEventListener('pointerup',()=>arrastando=false);
-canvas.addEventListener('pointercancel',()=>arrastando=false);
-
-document.querySelector('#girar').onclick=()=>{
- auto=!auto;
- document.querySelector('#girar').textContent=
- auto?'Parar rotação':'Girar automaticamente';
-};
-
-document.querySelector('#movimento').onclick=async()=>{
- try{
-  if(typeof DeviceOrientationEvent==='undefined'){
-   alert('Sensor não disponível neste navegador.');
-   return;
-  }
-  if(DeviceOrientationEvent.requestPermission){
-   const r=await DeviceOrientationEvent.requestPermission();
-   if(r!=='granted')return;
-  }
-  window.addEventListener('deviceorientation',e=>{
-   if(e.gamma!==null)angulo=e.gamma*.025;
-  });
-  alert('Sensor ativado, se permitido pelo navegador.');
- }catch(e){
-  alert('Abra o app em uma página HTTPS e tente novamente.');
- }
-};
-
 function animar(){
- requestAnimationFrame(animar);
- if(auto&&!arrastando)angulo+=.008;
- carro.rotation.y=angulo;
- renderer.render(scene,camera);
+requestAnimationFrame(animar);
+if(automatico)carro.rotation.y+=.006;
+render.render(cena,camera);
 }
 animar();
+
+// Cadastro local de veículos
+function mostrarCadastro(){
+const c=document.getElementById('cadastro');
+c.style.display=c.style.display==='block'?'none':'block';
+}
+
+function adicionar(){
+const nome=document.getElementById('nome').value.trim();
+const valor=document.getElementById('valor').value.trim();
+const ano=document.getElementById('ano').value.trim();
+
+if(!nome){alert('Digite o modelo do veículo.');return}
+
+const item=document.createElement('div');
+item.style.cssText='padding:12px;margin-top:10px;border-top:1px solid #444';
+
+const titulo=document.createElement('strong');
+titulo.textContent=nome+(ano?' • '+ano:'');
+
+const preco=document.createElement('p');
+preco.textContent=valor||'Consulte o preço';
+
+item.append(titulo,preco);
+document.getElementById('lista').appendChild(item);
+
+document.getElementById('nome').value='';
+document.getElementById('valor').value='';
+document.getElementById('ano').value='';
+alert('Veículo adicionado à lista nesta sessão!');
+}
 </script>
 </body>
 </html>
